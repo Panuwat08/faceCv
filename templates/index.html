@@ -1,0 +1,206 @@
+<!DOCTYPE html>
+<html lang="th">
+  <head>
+    <meta charset="UTF-8" />
+    <title>ระบบเช็คชื่อเข้าเรียน</title>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #e6f2ff;
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+        color: #0059b3;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        background: white;
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+        margin-top: 15px;
+      }
+      th,
+      td {
+        padding: 12px;
+        border: 1px solid #ccc;
+        text-align: center;
+      }
+      th {
+        background-color: #3399ff;
+        color: white;
+      }
+      img {
+        border-radius: 50%;
+        object-fit: cover;
+      }
+      tr:nth-child(even) {
+        background-color: #f2f9ff;
+      }
+      .status-present {
+        color: green;
+        font-weight: bold;
+      }
+      .status-absent {
+        color: red;
+        font-weight: bold;
+      }
+      .status-late {
+        color: orange;
+        font-weight: bold;
+      }
+      .controls {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 10px;
+      }
+      .pagination {
+        margin-top: 10px;
+        text-align: center;
+      }
+      .pagination button {
+        margin: 0 3px;
+        padding: 5px 10px;
+        border: none;
+        border-radius: 5px;
+        background: #3399ff;
+        color: white;
+        cursor: pointer;
+      }
+      .pagination button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>รายงานการเช็คชื่อสะเเกนใบหน้า</h1>
+
+    <div style="display: flex; justify-content: flex-end; margin-bottom: 15px font-size: 20px">
+  <div>
+    แสดง:
+    <select id="rows-per-page" style="font-size: 15px; padding: 5px;">
+      <option value="5" selected>5</option>
+      <option value="10">10</option>
+      <option value="15">15</option>
+    </select> รายการต่อหน้า
+  </div>
+</div>
+
+
+    <table>
+      <thead>
+        <tr>
+          <th>ID</th>
+          <th>ชื่อ</th>
+          <th>รูป</th>
+          <th>วันที่</th>
+          <th>เวลา</th>
+          <th>สถานะ</th>
+        </tr>
+      </thead>
+      <tbody id="attendance-table">
+        <tr>
+          <td colspan="6">กำลังโหลดข้อมูล...</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="pagination" id="pagination"></div>
+
+    <script>
+      let attendanceData = [];
+      let currentPage = 1;
+      let rowsPerPage = 5;
+
+      function statusClassFromText(text) {
+        if (text === "ขาด") return "status-absent";
+        if (text === "สาย") return "status-late";
+        return "status-present";
+      }
+
+      function renderTable() {
+        const table = document.getElementById("attendance-table");
+        table.innerHTML = "";
+
+        if (!Array.isArray(attendanceData) || attendanceData.length === 0) {
+          table.innerHTML = `<tr><td colspan="6">ไม่มีข้อมูลการเช็คชื่อ</td></tr>`;
+          return;
+        }
+
+        // slice ข้อมูลตามหน้าปัจจุบัน
+        const start = (currentPage - 1) * rowsPerPage;
+        const end = start + rowsPerPage;
+        const pageData = attendanceData.slice(start, end);
+
+        pageData.forEach((row) => {
+          const tr = document.createElement("tr");
+          const statusClass = statusClassFromText(row.status);
+
+          tr.innerHTML = `
+          <td>${row.id}</td>
+          <td>${row.name}</td>
+          <td>
+            <img src="${row.image_url}" width="60" height="60"
+                 onerror="this.src='/static/uploads/default.png'">
+          </td>
+          <td>${row.date}</td>
+          <td>${row.time}</td>
+          <td class="${statusClass}">${row.status}</td>
+        `;
+          table.appendChild(tr);
+        });
+
+        renderPagination();
+      }
+
+      function renderPagination() {
+        const totalPages = Math.ceil(attendanceData.length / rowsPerPage);
+        const pagination = document.getElementById("pagination");
+        pagination.innerHTML = "";
+
+        if (totalPages <= 1) return;
+
+        for (let i = 1; i <= totalPages; i++) {
+          const btn = document.createElement("button");
+          btn.textContent = i;
+          if (i === currentPage) btn.disabled = true;
+          btn.onclick = () => {
+            currentPage = i;
+            renderTable();
+          };
+          pagination.appendChild(btn);
+        }
+      }
+
+      function loadAttendance() {
+        fetch("/attendance_api")
+          .then((response) => response.json())
+          .then((data) => {
+            attendanceData = data;
+            currentPage = 1; // reset ไปหน้าแรก
+            renderTable();
+          })
+          .catch((err) => {
+            console.error("โหลดข้อมูลล้มเหลว!!!:", err);
+          });
+      }
+
+      // Event: เปลี่ยนจำนวน rows
+      document
+        .getElementById("rows-per-page")
+        .addEventListener("change", (e) => {
+          rowsPerPage = parseInt(e.target.value);
+          currentPage = 1;
+          renderTable();
+        });
+
+      // โหลดครั้งแรก
+      loadAttendance();
+      // โหลดซ้ำทุก 5 วิ
+      setInterval(loadAttendance, 5000);
+    </script>
+  </body>
+</html>

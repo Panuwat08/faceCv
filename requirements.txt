@@ -1,0 +1,12 @@
+requests>=2.27.1
+numpy>=1.19.5
+pandas>=1.3.5
+gdown>=3.10.1
+tqdm>=4.30.0
+Pillow>=8.0.0
+opencv-python>=4.5.5.64
+tensorflow==2.12.0
+keras==2.12.0
+Flask>=2.0.0
+flask-cors>=4.0.1
+deepface>=0.0.93
